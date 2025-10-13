@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForestGuard AI - Deforestation Detection</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #10b981;
+            --secondary-color: #3b82f6;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #10b981;
+            --bg-dark: #0f172a;
+            --bg-light: #f8fafc;
+            --card-dark: #1e293b;
+            --card-light: #ffffff;
+            --text-dark: #e2e8f0;
+            --text-light: #334155;
+            --border-color: #cbd5e1;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        /* Animated Background */
+        .bg-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            opacity: 0.1;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--gradient);
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .shape:nth-child(1) { width: 300px; height: 300px; top: 10%; left: 10%; animation-delay: 0s; }
+        .shape:nth-child(2) { width: 200px; height: 200px; top: 60%; right: 10%; animation-delay: 3s; }
+        .shape:nth-child(3) { width: 150px; height: 150px; bottom: 20%; left: 50%; animation-delay: 6s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(180deg); }
+        }
+
+        /* Navigation */
+        .navbar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        body.dark-mode .navbar {
+            background: rgba(30, 41, 59, 0.9);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: var(--card-light);
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        body.dark-mode .theme-toggle {
+            background: var(--card-dark);
+            border-color: #475569;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-light);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        body.dark-mode .card {
+            background: var(--card-dark);
+            border-color: #334155;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        body.dark-mode .card-header {
+            border-color: #334155;
+        }
+
+        .card-header i {
+            font-size: 1.75rem;
+            color: var(--primary-color);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* Map Card */
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-light);
+        }
+
+        body.dark-mode .input-group label {
+            color: var(--text-dark);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        body.dark-mode .input-field {
+            background: #0f172a;
+            border-color: #334155;
+            color: var(--text-dark);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Preset Buttons */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .preset-btn {
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .preset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .action-btn {
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Results Panel */
+        .results-panel {
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .results-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+        }
+
+        body.dark-mode .results-success {
+            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+            color: #d1fae5;
+        }
+
+        .results-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #78350f;
+        }
+
+        body.dark-mode .results-warning {
+            background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+            color: #fef3c7;
+        }
+
+        .results-critical {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #7f1d1d;
+        }
+
+        body.dark-mode .results-critical {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+            color: #fee2e2;
+        }
+
+        .results-header i {
+            font-size: 2.5rem;
+        }
+
+        .results-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.02);
+            padding: 1.25rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        body.dark-mode .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(16, 185, 129, 0.2);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Info Banner */
+        .info-banner {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            padding: 1rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #3b82f6;
+        }
+
+        body.dark-mode .info-banner {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: #dbeafe;
+        }
+
+        .info-banner i {
+            font-size: 1.5rem;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            margin-top: 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .chart-container img {
+            width: 100%;
+            display: block;
+        }
+
+        /* Recommendation Box */
+        .recommendation-box {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-left: 4px solid #0ea5e9;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
+        }
+
+        body.dark-mode .recommendation-box {
+            background: linear-gradient(135deg, #164e63 0%, #0e7490 100%);
+            color: #e0f2fe;
+        }
+
+        .recommendation-box strong {
+            color: #0369a1;
+            font-size: 1.125rem;
+        }
+
+        body.dark-mode .recommendation-box strong {
+            color: #7dd3fc;
+        }
+
+        /* Alert Items */
+        .alert-item {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .alert-item {
+            background: var(--card-dark);
+            border-color: #334155;
+        }
+
+        .alert-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .preset-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-tree"></i>
+            <span>ForestGuard AI</span>
+        </div>
+        <div class="nav-controls">
+            <button class="theme-toggle" onclick="toggleTheme()">
+                <i class="fas fa-moon" id="theme-icon"></i>
+                <span id="theme-text">Dark Mode</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Control Panel -->
+            <div class="card control-panel">
+                <div class="card-header">
+                    <i class="fas fa-sliders-h"></i>
+                    <h2 class="card-title">Control Panel</h2>
+                </div>
+
+                <!-- Info Banner -->
+                <div class="info-banner">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Draw a rectangle on the map or use preset regions</span>
+                </div>
+
+                <!-- Preset Regions -->
+                <div class="input-group">
+                    <label><i class="fas fa-map-marked-alt"></i> Quick Select Regions</label>
+                    <div class="preset-grid">
+                        <button onclick="setRegion(-60.0292,-3.4653,-59.8292,-3.2653)" class="preset-btn">
+                            🌳 Amazon
+                        </button>
+                        <button onclick="setRegion(-54.5,-10.5,-54.0,-10.0)" class="preset-btn">
+                            🌴 Mato Grosso
+                        </button>
+                        <button onclick="setRegion(18.0,-3.0,19.0,-2.0)" class="preset-btn">
+                            🌲 Congo
+                        </button>
+                        <button onclick="setRegion(113.0,-2.5,113.5,-2.0)" class="preset-btn">
+                            🌿 Borneo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Coordinates -->
+                <div class="input-group">
+                    <label><i class="fas fa-crosshairs"></i> Region Coordinates</label>
+                    <input type="text" id="bbox" class="input-field" value="-60.0292,-3.4653,-59.8292,-3.2653" placeholder="minLon,minLat,maxLon,maxLat">
+                </div>
+
+                <!-- Time Period -->
+                <div class="input-group">
+                    <label><i class="fas fa-calendar-alt"></i> Time Period</label>
+                    <select id="days" class="input-field">
+                        <option value="7">Last 7 days</option>
+                        <option value="14" selected>Last 14 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="60">Last 60 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn btn-primary" onclick="runDetection()">
+                        <i class="fas fa-search"></i> Analyze
+                    </button>
+                    <button class="action-btn btn-secondary" onclick="testDetection()">
+                        <i class="fas fa-vial"></i> Test
+                    </button>
+                    <button class="action-btn btn-warning" onclick="runTimeseriesAnalysis()">
+                        <i class="fas fa-chart-line"></i> 30-Day Trend
+                    </button>
+                    <button class="action-btn btn-info" onclick="loadAlerts()">
+                        <i class="fas fa-bell"></i> Alerts
+                    </button>
+                </div>
+            </div>
+
+            <!-- Map Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-globe-americas"></i>
+                    <h2 class="card-title">Interactive Map</h2>
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div id="results" class="card results-panel"></div>
+        
+        <!-- Alerts Panel -->
+        <div id="alerts" class="card results-panel"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+
+        // Theme Toggle
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            document.getElementById('theme-text').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        // Load theme preference
+        if (localStorage.getItem('theme') === 'dark') {
+            toggleTheme();
+        }
+
+        // Initialize map
+        var map = L.map('map').setView([-3.4653, -60.0292], 8);
+        
+        var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri',
+            maxZoom: 18
+        });
+        
+        var baseMaps = {
+            "Street Map": streetLayer,
+            "Satellite": satelliteLayer
+        };
+        L.control.layers(baseMaps).addTo(map);
+        
+        var currentRectangle = null;
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        var drawControl = new L.Control.Draw({
+            draw: {
+                rectangle: {
+                    shapeOptions: {
+                        color: '#10b981',
+                        weight: 3,
+                        fillOpacity: 0.2
+                    }
+                },
+                polygon: false,
+                circle: false,
+                marker: false,
+                circlemarker: false,
+                polyline: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+        
+        map.on(L.Draw.Event.CREATED, function(event) {
+            var layer = event.layer;
+            
+            if (currentRectangle) {
+                drawnItems.removeLayer(currentRectangle);
+            }
+            
+            currentRectangle = layer;
+            drawnItems.addLayer(layer);
+            
+            var bounds = layer.getBounds();
+            var sw = bounds.getSouthWest();
+            var ne = bounds.getNorthEast();
+            
+            var bbox = `${sw.lng.toFixed(4)},${sw.lat.toFixed(4)},${ne.lng.toFixed(4)},${ne.lat.toFixed(4)}`;
+            document.getElementById('bbox').value = bbox;
+        });
+        
+        function loadInitialRectangle() {
+            var bboxStr = document.getElementById('bbox').value;
+            var coords = bboxStr.split(',').map(parseFloat);
+            
+            if (coords.length === 4) {
+                var bounds = [[coords[1], coords[0]], [coords[3], coords[2]]];
+                currentRectangle = L.rectangle(bounds, {
+                    color: '#10b981',
+                    weight: 3,
+                    fillOpacity: 0.2
+                }).addTo(drawnItems);
+                
+                map.fitBounds(bounds);
+            }
+        }
+        
+        function setRegion(minLon, minLat, maxLon, maxLat) {
+            var bbox = `${minLon},${minLat},${maxLon},${maxLat}`;
+            document.getElementById('bbox').value = bbox;
+            
+            if (currentRectangle) {
+                drawnItems.removeLayer(currentRectangle);
+            }
+            
+            var bounds = [[minLat, minLon], [maxLat, maxLon]];
+            currentRectangle = L.rectangle(bounds, {
+                color: '#10b981',
+                weight: 3,
+                fillOpacity: 0.2
+            }).addTo(drawnItems);
+            
+            map.fitBounds(bounds);
+        }
+
+        async function runDetection() {
+            const bbox = document.getElementById('bbox').value.trim();
+            const days = document.getElementById('days').value;
+
+            if (!bbox) {
+                showError('Please enter region coordinates');
+                return;
+            }
+
+            const coords = bbox.split(',').map(c => c.trim());
+            if (coords.length !== 4 || coords.some(c => isNaN(c))) {
+                showError('Invalid coordinates format');
+                return;
+            }
+
+            showLoading('Fetching satellite imagery and analyzing deforestation...');
+
+            try {
+                const response = await fetch(`${API_BASE}/detect/?region=${encodeURIComponent(bbox)}&days_back=${days}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Detection failed');
+                }
+
+                displayResults(data);
+            } catch (error) {
+                showError(`Analysis failed: ${error.message}`);
+            }
+        }
+
+        async function testDetection() {
+            showLoading('Running test analysis...');
+
+            try {
+                const response = await fetch(`${API_BASE}/test/`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Test failed');
+                }
+
+                displayResults(data);
+            } catch (error) {
+                showError(`Test failed: ${error.message}`);
+            }
+        }
+
+        async function runTimeseriesAnalysis() {
+            const bbox = document.getElementById('bbox').value.trim();
+            
+            if (!bbox) {
+                showError('Please enter region coordinates');
+                return;
+            }
+            
+            showLoading('Fetching 30 days of satellite imagery... This may take 1-2 minutes.');
+            
+            try {
+                const response = await fetch(`${API_BASE}/analyze/timeseries/?region=${encodeURIComponent(bbox)}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Analysis failed');
+                }
+                
+                displayTimeseriesResults(data);
+            } catch (error) {
+                showError(`Timeseries analysis failed: ${error.message}`);
+            }
+        }
+
+        async function loadAlerts() {
+            try {
+                const response = await fetch(`${API_BASE}/alerts/?limit=20`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load alerts');
+                }
+
+                displayAlerts(data.alerts);
+            } catch (error) {
+                showError(`Failed to load alerts: ${error.message}`);
+            }
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            let resultClass = 'results-success';
+            let icon = 'fa-check-circle';
+            
+            if (data.deforestation_percentage > 20) {
+                resultClass = 'results-critical';
+                icon = 'fa-exclamation-triangle';
+            } else if (data.deforestation_percentage > 10) {
+                resultClass = 'results-warning';
+                icon = 'fa-exclamation-circle';
+            } else if (data.deforestation_percentage > 5) {
+                resultClass = 'results-warning';
+                icon = 'fa-info-circle';
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="results-header ${resultClass}">
+                    <i class="fas ${icon}"></i>
+                    <div>
+                        <h3 class="results-title">Analysis Complete</h3>
+                        <p>Deforestation Level: ${data.deforestation_percentage}%</p>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Region</div>
+                        <div class="metric-value" style="font-size: 1rem;">${data.region}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Deforestation</div>
+                        <div class="metric-value">${data.deforestation_percentage}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Confidence</div>
+                        <div class="metric-value">${data.confidence_score}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Alert Status</div>
+                        <div class="metric-value" style="font-size: 1rem;">${data.alert_logged ? 'LOGGED' : 'NOT TRIGGERED'}</div>
+                    </div>
+                </div>
+
+                <div class="recommendation-box">
+                    <strong><i class="fas fa-lightbulb"></i> Recommendation</strong><br>
+                    ${data.recommendation}
+                    ${data.alert_message ? `<br><br><strong>Alert:</strong> ${data.alert_message}` : ''}
+                </div>
+            `;
+
+            resultsDiv.style.display = 'block';
+            resultsDiv.classList.add('results-panel');
+        }
+
+        function displayTimeseriesResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const analysis = data.analysis;
+            const stats = analysis.statistics;
+            const trend = analysis.trend;
+            
+            let resultClass = 'results-success';
+            let icon = 'fa-chart-line';
+            
+            if (analysis.alert_level === 'critical') {
+                resultClass = 'results-critical';
+                icon = 'fa-exclamation-triangle';
+            } else if (analysis.alert_level === 'warning') {
+                resultClass = 'results-warning';
+                icon = 'fa-exclamation-circle';
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="results-header ${resultClass}">
+                    <i class="fas ${icon}"></i>
+                    <div>
+                        <h3 class="results-title">30-Day Vegetation Analysis</h3>
+                        <p>${data.time_period.start} to ${data.time_period.end}</p>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Average Cover</div>
+                        <div class="metric-value">${stats.mean}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Range</div>
+                        <div class="metric-value" style="font-size: 1.2rem;">${stats.min}% - ${stats.max}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Trend</div>
+                        <div class="metric-value" style="font-size: 1.2rem;">${trend.direction.toUpperCase()}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Health Status</div>
+                        <div class="metric-value" style="font-size: 1.2rem;">${trend.health_status.toUpperCase()}</div>
+                    </div>
+                </div>
+
+                ${analysis.anomalies.length > 0 ? `
+                    <div class="recommendation-box">
+                        <strong><i class="fas fa-exclamation-triangle"></i> Detected Anomalies</strong><br>
+                        ${analysis.anomalies.map(a => `${a.date}: ${a.value}% (deviation: ${a.deviation}%)`).join('<br>')}
+                    </div>
+                ` : ''}
+
+                <div class="chart-container">
+                    <img src="${API_BASE}/analyze/timeseries/plot?region=${encodeURIComponent(data.region)}" alt="Vegetation Trend">
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.classList.add('results-panel');
+        }
+
+        function displayAlerts(alerts) {
+            const alertsDiv = document.getElementById('alerts');
+
+            if (!alerts || alerts.length === 0) {
+                alertsDiv.innerHTML = `
+                    <div class="card-header">
+                        <i class="fas fa-bell"></i>
+                        <h2 class="card-title">Recent Alerts</h2>
+                    </div>
+                    <div class="info-banner">
+                        <i class="fas fa-info-circle"></i>
+                        <span>No alerts found</span>
+                    </div>
+                `;
+            } else {
+                let alertsHtml = `
+                    <div class="card-header">
+                        <i class="fas fa-bell"></i>
+                        <h2 class="card-title">Recent Alerts (${alerts.length})</h2>
+                    </div>
+                `;
+
+                alerts.forEach(alert => {
+                    const date = new Date(alert.timestamp).toLocaleString();
+                    alertsHtml += `
+                        <div class="alert-item">
+                            <strong style="color: var(--warning-color);">${alert.alert_level}</strong> - ${alert.deforestation_percentage}% deforestation
+                            <br><small>Region: ${alert.region}</small>
+                            <br><small><i class="far fa-clock"></i> ${date}</small>
+                        </div>
+                    `;
+                });
+
+                alertsDiv.innerHTML = alertsHtml;
+            }
+
+            alertsDiv.style.display = 'block';
+            alertsDiv.classList.add('results-panel');
+        }
+
+        function showLoading(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <div class="loading-text">${message}</div>
+                </div>
+            `;
+            resultsDiv.style.display = 'block';
+            resultsDiv.classList.add('results-panel');
+        }
+
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="results-header results-critical">
+                    <i class="fas fa-times-circle"></i>
+                    <div>
+                        <h3 class="results-title">Error</h3>
+                        <p>${message}</p>
+                    </div>
+                </div>
+            `;
+            resultsDiv.style.display = 'block';
+            resultsDiv.classList.add('results-panel');
+        }
+
+        window.onload = async function() {
+            setTimeout(loadInitialRectangle, 500);
+            
+            try {
+                const response = await fetch(`${API_BASE}/model/status`);
+                const data = await response.json();
+
+                if (!data.model_loaded) {
+                    showError('Deforestation model not loaded. Please check the model file path.');
+                }
+            } catch (error) {
+                console.log('Could not check model status:', error);
+            }
+        };
+    </script>
+</body>
+</html>
